@@ -10,24 +10,26 @@ This repository provides the reference implementation of **Continuous Generalize
 
 ## Overview
 
-Foundation models applied to complex physical dynamical systems, such as magnetic confinement fusion in tokamaks, frequently encounter an empirical performance plateau under standard Supervised Fine-Tuning (SFT). Mean Squared Error (MSE) objectives minimize conditional expectations $\mathbb{E}[y \mid x]$, which smooths over multi-scale dynamics, localized steep gradients, and transient physical perturbations.
+Foundation models applied to complex physical dynamical systems, such as magnetic confinement fusion in tokamaks, frequently encounter an empirical performance plateau under standard Supervised Fine-Tuning (SFT). Mean Squared Error (MSE) objectives minimize conditional expectations E[y | x], which smooths over multi-scale dynamics, localized steep gradients, and transient physical perturbations.
 
 While offline preference optimization frameworks (such as Direct Preference Optimization [DPO] and Identity Preference Optimization [IPO]) have proven effective in discrete domains, adapting them to continuous physical foundation models presents a fundamental mathematical barrier:
 
-> **The Continuous Alignment Challenge:** Canonical preference formulations require evaluating token log-probabilities $\log \pi(y \mid x)$. While tractable for categorical distributions over discrete vocabularies, sequence log-probabilities are mathematically undefined for continuous deterministic regression heads producing continuous output vectors in $\mathbb{R}^D$ without an associated predictive probability density.
+> **The Continuous Alignment Challenge:** Canonical preference formulations require evaluating token log-probabilities log π(y | x). While tractable for categorical distributions over discrete vocabularies, sequence log-probabilities are mathematically undefined for continuous deterministic regression heads producing continuous output vectors in ℝᴰ without an associated predictive probability density.
 
-**Continuous Generalized Preference Optimization (CGPO)** resolves this gap by formulating reference-anchored preference margins directly within the foundation model's orthonormal spectral latent space (3D Discrete Cosine Transform, DCT3D). Experimental discharge telemetry serves as the objective ground-truth attractor ($y_w$), contrasted against model failure modes ($y_l$).
+**Continuous Generalized Preference Optimization (CGPO)** resolves this gap by formulating reference-anchored preference margins directly within the foundation model's orthonormal spectral latent space (3D Discrete Cosine Transform, DCT3D). Experimental discharge telemetry serves as the objective ground-truth attractor (y_w), contrasted against model failure modes (y_l).
 
 ---
 
 ## Theoretical Framework
 
 - **Continuous Preference Margin:** Replaces discrete token log-likelihood ratios with reference-anchored Euclidean distance metrics in spectral embedding space:
-  $$M(\hat{y}; x) = \left[ d(\hat{y}, y_l) - d(\hat{y}_{\text{ref}}, y_l) \right] - \left[ d(\hat{y}, y_w) - d(\hat{y}_{\text{ref}}, y_w) \right]$$
-  where $d(u, v) = \frac{1}{D}\|u - v\|_2^2$. Differentiating the margin yields a constant contrastive vector field $\nabla_{\hat{y}} M = \frac{2}{D}(y_w - y_l)$ directed from the historical failure anchor $y_l$ toward ground truth $y_w$.
-- **Continuous IPO Gradient Dynamics:** Continuous DPO exhibits asymptotic gradient saturation ($\sigma(-\beta M) \to 0$ as $M > 0$), permitting policy drift along unconstrained dimensions in unbounded vector spaces. In contrast, **Continuous IPO** optimizes a regularized quadratic penalty against a finite target margin $M^* = \frac{1}{2\beta^*}$, exerting an active restorative vector field that prevents gradient saturation and reward hacking.
+  ```text
+  M(ŷ; x) = [d(ŷ, y_l) - d(ŷ_ref, y_l)] - [d(ŷ, y_w) - d(ŷ_ref, y_w)]
+  ```
+  where `d(u, v) = (1/D) ‖u - v‖₂²`. Differentiating the margin yields a constant contrastive vector field `∇_ŷ M = (2/D)(y_w - y_l)` directed from the historical failure anchor `y_l` toward ground truth `y_w`.
+- **Continuous IPO Gradient Dynamics:** Continuous DPO exhibits asymptotic gradient saturation (σ(−β·M) → 0 as M > 0), permitting policy drift along unconstrained dimensions in unbounded vector spaces. In contrast, **Continuous IPO** optimizes a regularized quadratic penalty against a finite target margin `M* = 1 / (2β*)`, exerting an active restorative vector field that prevents gradient saturation and reward hacking.
 - **Dual-Objective Dynamic Normalization:** Combines the contrastive preference objective on informative error pairs with an isotropic latent reconstruction anchor to maintain global calibration and stabilize adapter updates across sparse preference batches.
-- **Error-Slice Pair Filtering:** Restricts pairwise optimization to the $[25\%, 95\%]$ native-space NRMSE percentile band, filtering out uninformative quiescent intervals at the lower quartile and non-physical diagnostic acquisition artifacts at the extreme upper tail.
+- **Error-Slice Pair Filtering:** Restricts pairwise optimization to the [25%, 95%] native-space NRMSE percentile band, filtering out uninformative quiescent intervals at the lower quartile and non-physical diagnostic acquisition artifacts at the extreme upper tail.
 
 ---
 
@@ -103,8 +105,8 @@ python scripts_mast/run_local_smoke_test.py
 
 This verification procedure tests:
 - Loading model output adapters and reference policy checkpoints.
-- Continuous IPO quadratic margin evaluation ($M(\hat{y}; x) = [d(\hat{y}, y_l) - d(\hat{y}_{\text{ref}}, y_l)] - [d(\hat{y}, y_w) - d(\hat{y}_{\text{ref}}, y_w)]$).
-- Dual-objective dynamic normalization ($w_{\text{pref}} \mathcal{L}_{\text{pref}} + w_{\text{mse}} \mathcal{L}_{\text{embed\_mse}}$).
+- Continuous IPO quadratic margin evaluation: `M(ŷ; x) = [d(ŷ, y_l) - d(ŷ_ref, y_l)] - [d(ŷ, y_w) - d(ŷ_ref, y_w)]`.
+- Dual-objective dynamic normalization: `w_pref · L_pref + w_mse · L_embed_mse`.
 - Gradient updates restricted to output adapters while preserving frozen backbone weights.
 
 To execute the unit and integration test suite:
@@ -145,10 +147,10 @@ python scripts_mast/run_gpo_finetune.py \
 
 Key optimization configurations (specified in `scripts_mast/configs/mmt/tasks/gpo_tasks.yaml`):
 - **Frozen Parameters:** Transformer backbone and token encoders remain frozen.
-- **Trained Parameters:** Modality heads and output adapters (learning rate: $1 \times 10^{-4}$).
-- **Temperature Scale Heuristic:** $\beta^* = \frac{1}{\text{median}(d(y_w, y_l))}$.
-- **Reconstruction Anchor Weight:** $w_{\text{mse}} = 0.2$ on all windows.
-- **Pair Filtering Band:** Native NRMSE percentile interval $[25\%, 95\%]$ with per-shot window caps at the 90th percentile.
+- **Trained Parameters:** Modality heads and output adapters (learning rate: `1e-4`).
+- **Temperature Scale Heuristic:** `β* = 1 / median(d(y_w, y_l))`.
+- **Reconstruction Anchor Weight:** `w_mse = 0.2` on all windows.
+- **Pair Filtering Band:** Native NRMSE percentile interval `[25%, 95%]` with per-shot window caps at the 90th percentile.
 
 ### Stage 3: Benchmark Evaluation
 
