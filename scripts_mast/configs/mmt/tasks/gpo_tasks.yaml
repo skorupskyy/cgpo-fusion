@@ -1,0 +1,587 @@
+# CGPO task recipes. Source representation and official shot split remain authoritative.
+# These beta/blacklist values are historical starting points, not validated optima.
+# Create an immutable per-run calibration artifact before training; never patch this file from a job.
+# Reference subtracts a fixed relative-distance margin; it does not enforce a KL bound.
+# DPO has derivative -beta/2 at zero margin. IPO penalizes margin overshoot but not orthogonal drift.
+# embed_mse softly anchors all valid windows; sft_weight anchors only paired windows.
+# Clip/log collection-gap transforms are incompatible with use_reference_model=true.
+
+tasks:
+
+  task_4-1:
+    preprocess:
+      valid_windows:
+        window_stride_sec: 0.02
+      chunks:
+        input:
+          max_chunks: 40
+        actuator:
+          max_chunks: 40
+    loader:
+      batch_size: 64
+    train:
+      gpo_dataset:
+        shot_blacklist: [18675, 14013, 14342]
+        native_nrmse_percentiles: [25.0, 95.0]
+        max_pairs_per_shot_percentile: 90.0
+      loss:
+        terms:
+          - type: continuous_gpo
+            weight: 1.0
+            beta: 10.0
+            loss_type: ipo
+            sft_weight: 0.0
+          - type: embed_mse
+            weight: 0.2
+      stages:
+        - name: gpo
+          epochs: 200
+          scheduler:
+            grad_accum_steps: 1
+            warmup_steps_fraction: 0.1
+          optimizer:
+            lr:
+              token_encoder: 5e-4
+              backbone: 1e-4
+              modality_heads: 1e-4
+              output_adapters: 1e-4
+            wd:
+              token_encoder: 0.01
+              backbone: 0.01
+              modality_heads: 0.01
+              output_adapters: 0.01
+          freeze:
+            token_encoder: true
+            backbone: true
+            modality_heads: false
+            output_adapters: false
+
+  task_4-2:
+    preprocess:
+      valid_windows:
+        window_stride_sec: 0.02
+      chunks:
+        input:
+          max_chunks: 40
+        actuator:
+          max_chunks: 40
+    loader:
+      batch_size: 256
+    train:
+      gpo_dataset:
+        shot_blacklist: [18675, 14013, 14342]
+        native_nrmse_percentiles: [25.0, 95.0]
+        max_pairs_per_shot_percentile: 90.0
+      loss:
+        terms:
+          - type: continuous_gpo
+            weight: 1.0
+            beta: 10.0
+            loss_type: ipo
+            sft_weight: 0.0
+          - type: embed_mse
+            weight: 0.2
+      stages:
+        - name: gpo
+          epochs: 200
+          scheduler:
+            grad_accum_steps: 1
+            warmup_steps_fraction: 0.1
+          optimizer:
+            lr:
+              token_encoder: 5e-4
+              backbone: 1e-4
+              modality_heads: 1e-4
+              output_adapters: 1e-4
+            wd:
+              token_encoder: 0.01
+              backbone: 0.01
+              modality_heads: 0.01
+              output_adapters: 0.01
+          freeze:
+            token_encoder: true
+            backbone: true
+            modality_heads: false
+            output_adapters: false
+
+  task_4-3:
+    preprocess:
+      valid_windows:
+        window_stride_sec: 0.02
+      chunks:
+        input:
+          max_chunks: 40
+        actuator:
+          max_chunks: 40
+    loader:
+      batch_size: 256
+    train:
+      gpo_dataset:
+        native_nrmse_percentiles: [25.0, 95.0]
+        max_pairs_per_shot_percentile: 90.0
+      loss:
+        terms:
+          - type: continuous_gpo
+            weight: 1.0
+            beta: 50.0
+            loss_type: ipo
+            sft_weight: 0.0
+          - type: embed_mse
+            weight: 0.2
+      stages:
+        - name: gpo
+          epochs: 200
+          scheduler:
+            grad_accum_steps: 1
+            warmup_steps_fraction: 0.05
+          optimizer:
+            lr:
+              token_encoder: 5e-4
+              backbone: 1e-4
+              modality_heads: 1e-4
+              output_adapters: 1e-4
+            wd:
+              token_encoder: 0.01
+              backbone: 0.01
+              modality_heads: 0.01
+              output_adapters: 0.01
+          freeze:
+            token_encoder: true
+            backbone: true
+            modality_heads: false
+            output_adapters: false
+
+  task_4-4:
+    preprocess:
+      valid_windows:
+        window_stride_sec: 0.02
+      chunks:
+        input:
+          max_chunks: 40
+        actuator:
+          max_chunks: 40
+    loader:
+      batch_size: 256
+    train:
+      gpo_dataset:
+        shot_blacklist: [18492, 14357, 17044, 12667, 15359, 16180, 15767, 15524, 14433, 12898,
+                         20575, 20839, 14383, 17048, 17412]
+        native_nrmse_percentiles: [25.0, 95.0]
+        max_pairs_per_shot_percentile: 90.0
+      loss:
+        terms:
+          - type: continuous_gpo
+            weight: 1.0
+            beta: 8.0
+            loss_type: dpo
+            sft_weight: 0.0
+          - type: embed_mse
+            weight: 0.2
+      stages:
+        - name: gpo
+          epochs: 200
+          scheduler:
+            grad_accum_steps: 1
+            warmup_steps_fraction: 0.05
+          optimizer:
+            lr:
+              token_encoder: 5e-4
+              backbone: 1e-4
+              modality_heads: 1e-4
+              output_adapters: 1e-4
+            wd:
+              token_encoder: 0.01
+              backbone: 0.01
+              modality_heads: 0.01
+              output_adapters: 0.01
+          freeze:
+            token_encoder: true
+            backbone: true
+            modality_heads: false
+            output_adapters: false
+
+  task_4-5:
+    preprocess:
+      valid_windows:
+        window_stride_sec: 0.02
+      chunks:
+        input:
+          max_chunks: 40
+        actuator:
+          max_chunks: 40
+    loader:
+      batch_size: 256
+    train:
+      gpo_dataset:
+        shot_blacklist: [30339, 28311, 28268]
+        native_nrmse_percentiles: [25.0, 95.0]
+        max_pairs_per_shot_percentile: 90.0
+        min_window_index: 50
+      loss:
+        terms:
+          - type: continuous_gpo
+            weight: 1.0
+            beta: 5.0
+            loss_type: ipo
+            sft_weight: 0.0
+          - type: embed_mse
+            weight: 0.2
+      stages:
+        - name: gpo
+          epochs: 200
+          scheduler:
+            grad_accum_steps: 1
+            warmup_steps_fraction: 0.05
+          optimizer:
+            lr:
+              token_encoder: 5e-4
+              backbone: 1e-4
+              modality_heads: 1e-4
+              output_adapters: 1e-4
+            wd:
+              token_encoder: 0.01
+              backbone: 0.01
+              modality_heads: 0.01
+              output_adapters: 0.01
+          freeze:
+            token_encoder: true
+            backbone: true
+            modality_heads: false
+            output_adapters: false
+
+  task_1-1:
+    train:
+      gpo_dataset:
+        shot_blacklist: [24463, 25327, 21296]
+        native_nrmse_percentiles: [25.0, 95.0]
+        max_pairs_per_shot_percentile: 90.0
+      loss:
+        terms:
+          - type: continuous_gpo
+            weight: 1.0
+            beta: 100.0
+            loss_type: ipo
+            sft_weight: 0.0
+          - type: embed_mse
+            weight: 0.2
+      stages:
+        - name: gpo
+          epochs: 200
+          scheduler:
+            grad_accum_steps: 1
+            warmup_steps_fraction: 0.05
+          optimizer:
+            lr:
+              token_encoder: 5e-4
+              backbone: 1e-4
+              modality_heads: 1e-4
+              output_adapters: 1e-4
+            wd:
+              token_encoder: 0.01
+              backbone: 0.01
+              modality_heads: 0.01
+              output_adapters: 0.01
+          freeze:
+            token_encoder: true
+            backbone: true
+            modality_heads: false
+            output_adapters: false
+
+  task_1-2:
+    train:
+      gpo_dataset:
+        shot_blacklist: [26921, 24828, 21359]
+        native_nrmse_percentiles: [25.0, 95.0]
+        max_pairs_per_shot_percentile: 90.0
+      loss:
+        terms:
+          - type: continuous_gpo
+            weight: 1.0
+            beta: 50.0
+            loss_type: ipo
+            sft_weight: 0.0
+          - type: embed_mse
+            weight: 0.2
+      stages:
+        - name: gpo
+          epochs: 200
+          scheduler:
+            grad_accum_steps: 1
+            warmup_steps_fraction: 0.05
+          optimizer:
+            lr:
+              token_encoder: 5e-4
+              backbone: 1e-4
+              modality_heads: 1e-4
+              output_adapters: 1e-4
+            wd:
+              token_encoder: 0.01
+              backbone: 0.01
+              modality_heads: 0.01
+              output_adapters: 0.01
+          freeze:
+            token_encoder: true
+            backbone: true
+            modality_heads: false
+            output_adapters: false
+
+  task_1-3:
+    train:
+      gpo_dataset:
+        shot_blacklist: [16914, 11822, 21004, 26846, 13202]
+        native_nrmse_percentiles: [25.0, 95.0]
+        max_pairs_per_shot_percentile: 90.0
+      loss:
+        terms:
+          - type: continuous_gpo
+            weight: 1.0
+            beta: 2.0
+            loss_type: ipo
+            sft_weight: 0.0
+          - type: embed_mse
+            weight: 0.2
+      stages:
+        - name: gpo
+          epochs: 200
+          scheduler:
+            grad_accum_steps: 1
+            warmup_steps_fraction: 0.05
+          optimizer:
+            lr:
+              token_encoder: 5e-4
+              backbone: 1e-4
+              modality_heads: 1e-4
+              output_adapters: 1e-4
+            wd:
+              token_encoder: 0.01
+              backbone: 0.01
+              modality_heads: 0.01
+              output_adapters: 0.01
+          freeze:
+            token_encoder: true
+            backbone: true
+            modality_heads: false
+            output_adapters: false
+
+  task_2-1:
+    train:
+      gpo_dataset:
+        shot_blacklist: [24463, 22046, 23931]
+        native_nrmse_percentiles: [25.0, 95.0]
+        max_pairs_per_shot_percentile: 90.0
+      loss:
+        terms:
+          - type: continuous_gpo
+            weight: 1.0
+            beta: 25.0
+            loss_type: ipo
+            sft_weight: 0.0
+          - type: embed_mse
+            weight: 0.2
+      stages:
+        - name: gpo
+          epochs: 200
+          scheduler:
+            grad_accum_steps: 1
+            warmup_steps_fraction: 0.05
+          optimizer:
+            lr:
+              token_encoder: 5e-4
+              backbone: 1e-4
+              modality_heads: 1e-4
+              output_adapters: 1e-4
+            wd:
+              token_encoder: 0.01
+              backbone: 0.01
+              modality_heads: 0.01
+              output_adapters: 0.01
+          freeze:
+            token_encoder: true
+            backbone: true
+            modality_heads: false
+            output_adapters: false
+
+  task_2-2:
+    train:
+      gpo_dataset:
+        shot_blacklist: [24828, 24463, 26921]
+        native_nrmse_percentiles: [25.0, 95.0]
+        max_pairs_per_shot_percentile: 90.0
+      loss:
+        terms:
+          - type: continuous_gpo
+            weight: 1.0
+            beta: 40.0
+            loss_type: ipo
+            sft_weight: 0.0
+          - type: embed_mse
+            weight: 0.2
+      stages:
+        - name: gpo
+          epochs: 200
+          scheduler:
+            grad_accum_steps: 1
+            warmup_steps_fraction: 0.05
+          optimizer:
+            lr:
+              token_encoder: 5e-4
+              backbone: 1e-4
+              modality_heads: 1e-4
+              output_adapters: 1e-4
+            wd:
+              token_encoder: 0.01
+              backbone: 0.01
+              modality_heads: 0.01
+              output_adapters: 0.01
+          freeze:
+            token_encoder: true
+            backbone: true
+            modality_heads: false
+            output_adapters: false
+
+  task_2-3:
+    train:
+      gpo_dataset:
+        shot_blacklist: [11822, 26259, 28240, 21004, 25094]
+        native_nrmse_percentiles: [25.0, 95.0]
+        max_pairs_per_shot_percentile: 90.0
+      loss:
+        terms:
+          - type: continuous_gpo
+            weight: 1.0
+            beta: 2.0
+            loss_type: ipo
+            sft_weight: 0.0
+          - type: embed_mse
+            weight: 0.2
+      stages:
+        - name: gpo
+          epochs: 200
+          scheduler:
+            grad_accum_steps: 1
+            warmup_steps_fraction: 0.05
+          optimizer:
+            lr:
+              token_encoder: 5e-4
+              backbone: 1e-4
+              modality_heads: 1e-4
+              output_adapters: 1e-4
+            wd:
+              token_encoder: 0.01
+              backbone: 0.01
+              modality_heads: 0.01
+              output_adapters: 0.01
+          freeze:
+            token_encoder: true
+            backbone: true
+            modality_heads: false
+            output_adapters: false
+
+  task_3-1:
+    train:
+      loss:
+        terms:
+          - type: continuous_gpo
+            weight: 1.0
+            beta: 10.0
+            loss_type: ipo
+            sft_weight: 0.0
+          - type: embed_mse
+            weight: 0.2
+      stages:
+        - name: gpo
+          epochs: 200
+          scheduler:
+            grad_accum_steps: 1
+            warmup_steps_fraction: 0.1
+          optimizer:
+            lr:
+              token_encoder: 5e-4
+              backbone: 1e-4
+              modality_heads: 1e-4
+              output_adapters: 1e-4
+            wd:
+              token_encoder: 0.01
+              backbone: 0.01
+              modality_heads: 0.01
+              output_adapters: 0.01
+          freeze:
+            token_encoder: true
+            backbone: true
+            modality_heads: false
+            output_adapters: false
+
+  task_3-2:
+    train:
+      loss:
+        terms:
+          - type: continuous_gpo
+            weight: 1.0
+            beta: 10.0
+            loss_type: ipo
+            sft_weight: 0.0
+          - type: embed_mse
+            weight: 1.0
+      stages:
+        - name: gpo
+          epochs: 200
+          scheduler:
+            grad_accum_steps: 1
+            warmup_steps_fraction: 0.1
+          optimizer:
+            lr:
+              token_encoder: 5e-4
+              backbone: 1e-4
+              modality_heads: 1e-4
+              output_adapters: 1e-4
+            wd:
+              token_encoder: 0.01
+              backbone: 0.01
+              modality_heads: 0.01
+              output_adapters: 0.01
+          freeze:
+            token_encoder: true
+            backbone: true
+            modality_heads: false
+            output_adapters: false
+
+  task_3-3:
+    preprocess:
+      chunks:
+        input:
+          max_chunks: 21
+        actuator:
+          max_chunks: 21
+    train:
+      loss:
+        terms:
+          - type: continuous_gpo
+            weight: 1.0
+            beta: 10.0
+            loss_type: ipo
+            sft_weight: 0.0
+          - type: embed_mse
+            weight: 0.2
+      stages:
+        - name: gpo
+          epochs: 200
+          scheduler:
+            grad_accum_steps: 1
+            warmup_steps_fraction: 0.1
+          optimizer:
+            lr:
+              token_encoder: 5e-4
+              backbone: 1e-4
+              modality_heads: 1e-4
+              output_adapters: 1e-4
+            wd:
+              token_encoder: 0.01
+              backbone: 0.01
+              modality_heads: 0.01
+              output_adapters: 0.01
+          freeze:
+            token_encoder: true
+            backbone: true
+            modality_heads: false
+            output_adapters: false
+

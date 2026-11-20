@@ -1,0 +1,115 @@
+# GPO (Generalized Preference Optimization) fine-tuning phase config for MMT.
+#
+# This phase takes a trained finetune checkpoint and runs one GPO stage over
+# the pre-collected embedding-space preference pairs.
+#
+# How it differs from finetune_scratch.yaml
+# -----------------------------------------
+# • Loss term is continuous_gpo (embedding-space Bradley-Terry).
+# • Per-block learning rates for preference fine-tuning.
+# • Short schedule to be assessed on independent validation.
+# • No input-dropout augmentation (pairs are fixed offline data).
+# • data.cache defaults to true for fast iteration on small pair datasets.
+#
+# Task-specific overrides live in:
+#   scripts_mast/configs/mmt/tasks/gpo_tasks.yaml
+
+seed: 54
+
+runtime:
+  debug_logging: false
+
+run_id: null
+
+
+data:
+  # Split, subset and preprocessing are inherited strictly from the source.
+  # Machine paths are resolved from local_overrides.yaml last.
+
+  cache:
+    enable: true
+    dtype: float16
+    num_workers: 32
+    max_windows:
+      train: null
+      val: null
+
+
+# No stochastic input dropout during GPO — pairs are deterministic offline data.
+collate:
+  p_drop_inputs: 0.0
+  p_drop_inputs_overrides: {}
+  p_drop_outputs: 0.0
+  p_drop_outputs_overrides: {}
+  p_drop_actuators: 0.0
+  p_drop_actuators_overrides: {}
+  p_drop_inputs_chunks: 0.0
+  p_drop_actuators_chunks: 0.0
+
+
+loader:
+  batch_size: 256
+  num_workers: 0
+  shuffle_train: true
+  drop_last: false
+  batches_per_epoch: null
+
+
+train:
+  resume: false
+
+  # Enable reference-relative distance margin via a frozen copy of the base checkpoint.
+  # When true, _GpoBatchInjector runs a no_grad forward pass on each batch and
+  # injects ref_preds into the batch dict; ContinuousGPOLoss then computes the
+  # reference-anchored margin instead of the raw collection-time anchor.
+  use_reference_model: true
+
+  checkpoint_metric: mse  # macro-average embedding MSE on all valid validation windows
+
+  early_stop:
+    patience: 10
+    delta: 0.0
+
+  amp:
+    enable: true
+
+  loss:
+    terms:
+      - type: continuous_gpo
+        weight: 0.8
+        beta: 0.1           # margin temperature — tune per task
+        sft_weight: 0.3     # supervised co-loss keeps model near ground truth
+      - type: embed_mse    # optional: add standard MSE to stabilise training
+        weight: 0.2
+
+  optimizer:
+    use_adamw: true
+
+  stages:
+    - name: gpo
+      epochs: 200
+
+      scheduler:
+        grad_accum_steps: 1
+        warmup_steps_fraction: 0.05
+
+      # GPO learning rates: 5-10× smaller than finetune to avoid catastrophic forgetting.
+      optimizer:
+        lr:
+          token_encoder: 5e-4
+          backbone: 1e-4
+          modality_heads: 5e-4
+          output_adapters: 5e-4
+        wd:
+          token_encoder: 0.01
+          backbone: 0.01
+          modality_heads: 0.01
+          output_adapters: 0.01
+
+      # Keep backbone frozen in the first GPO run (only output adapters update).
+      # Set all to false to allow full fine-tuning.
+      freeze:
+        token_encoder: true
+        backbone: true
+        modality_heads: false
+        output_adapters: false
